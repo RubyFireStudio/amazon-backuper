@@ -2,8 +2,7 @@ import boto3
 import os
 import logging
 
-from botocore.exceptions import ClientError
-
+from src.s3_manager import S3Manager
 from .settings import BACKUP_BUCKET_NAME, BACKUP_DIR, BACKUP_CHECK_HASH
 from .utils import get_md5
 
@@ -12,6 +11,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 s3 = boto3.client('s3')
+s3_manager = S3Manager(BACKUP_BUCKET_NAME)
 
 
 def get_all_backup_files():
@@ -43,17 +43,10 @@ def get_files_to_backup():
 
 
 def upload_files(file_list):
-    count = 0
-    for filename in file_list:
-        file = os.path.join(BACKUP_DIR, filename)
-        try:
-            s3.upload_file(file, BACKUP_BUCKET_NAME, filename)
-        except ClientError:
-            logger.error('Error in uploading {} file'.format(file))
-        else:
-            count += 1
     if len(file_list) > 0:
-        logger.info('Upload {}/{} files'.format(count, len(file_list)))
+        file_list = [os.path.join(BACKUP_DIR, filename) for filename in file_list]
+        uploaded_count = s3_manager.upload_files(file_list)
+        logger.info('Uploaded {}/{} files'.format(uploaded_count, len(file_list)))
     else:
         logger.info('No new files to upload')
 
